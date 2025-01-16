@@ -74,8 +74,11 @@ class DLGParser:
             with open(self.dlg_file_path, "r") as file:
                 for line in file:
                     if recording:
-                        if line.startswith("DOCKED: HETATM") or (include_flexible and line.startswith("DOCKED: ATOM")):
+                        if line.startswith("DOCKED: HETATM"):
                             pdb_line = self.format_pdb_line(line[8:].strip())
+                            pose_coordinates.append(pdb_line)
+                        elif include_flexible and line.startswith("DOCKED: ATOM"):
+                            pdb_line = self.format_pdb_line(line[8:].strip(), flexible=True)
                             pose_coordinates.append(pdb_line)
                         elif line.startswith("DOCKED: ENDMDL"):
                             print(f"Finished reading coordinates for run {run_number}.")
@@ -92,12 +95,13 @@ class DLGParser:
         return pose_coordinates
 
     @staticmethod
-    def format_pdb_line(docked_line):
+    def format_pdb_line(docked_line, flexible=False):
         """
-        Format a DOCKED: HETATM or ATOM line into standard PDB format, focusing only on coordinates.
+        Format a DOCKED: HETATM or ATOM line into standard PDB format.
 
         Parameters:
             docked_line (str): Line from the DLG file starting with HETATM or ATOM.
+            flexible (bool): Whether the line represents a flexible residue.
 
         Returns:
             str: Reformatted line in standard PDB format.
@@ -105,10 +109,10 @@ class DLGParser:
         parts = docked_line.split()
         atom_name = parts[2]
         residue_name = parts[3]
-        chain_id = "A"  # Default chain ID
-        residue_id = int(parts[4])
-        x, y, z = map(float, parts[5:8])
-        element = parts[10]
+        chain_id = parts[4] if flexible else "A"  # Use chain ID from file if flexible
+        residue_id = int(parts[5]) if flexible else int(parts[4])
+        x, y, z = map(float, parts[6:9]) if flexible else map(float, parts[5:8])
+        element = parts[-1]
 
         return f"HETATM{int(parts[1]):>5} {atom_name:<4} {residue_name:<3} {chain_id}{residue_id:>4}    {x:>8.3f}{y:>8.3f}{z:>8.3f}           {element:>2}"
 
@@ -194,5 +198,6 @@ def main():
     dlg_parser.parse_ranking_table()
     dlg_parser.write_top_poses(output_dir=args.output_dir, top_n=args.top_n, include_flexible=args.include_flexible)
     dlg_parser.print_summary(log_file=args.log_file)
+
 if __name__ == "__main__":
     main()

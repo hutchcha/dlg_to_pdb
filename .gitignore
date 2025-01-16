@@ -1,3 +1,17 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Python-related files
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Build files
+build/
+dist/
+
+# Virtual environments
+venv/
+.env/
